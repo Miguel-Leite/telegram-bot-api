@@ -38,32 +38,49 @@ const options = {
 };
 const swaggerSpec = (0, swagger_jsdoc_1.default)(options);
 app.use('/docs', swagger_ui_express_1.default.serve, swagger_ui_express_1.default.setup(swaggerSpec));
+function normalizeChatId(chatId) {
+    let id = String(chatId);
+    if (id.startsWith('@')) {
+        return id;
+    }
+    if (id.startsWith('-100')) {
+        return id;
+    }
+    if (id.startsWith('-')) {
+        return `-100${id.substring(1)}`;
+    }
+    return id;
+}
 // ====== ROUTES ======
 /**
  * @swagger
  * /send-message:
  *   post:
- *     summary: Send a message to a Telegram chat
+ *     summary: Enviar mensagem para um canal ou grupo
+ *     tags: [Telegram]
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
  *             type: object
+ *             required:
+ *               - chatId
+ *               - message
  *             properties:
  *               chatId:
  *                 type: string
- *                 description: The ID of the Telegram chat
+ *                 example: "-1001234567890"
  *               message:
  *                 type: string
- *                 description: The message to send
+ *                 example: "Olá mundo 🚀"
  *     responses:
  *       200:
- *         description: Message sent successfully
+ *         description: Mensagem enviada com sucesso
  *       400:
- *         description: Bad request
- *      500:
- *         description: Internal server error
+ *         description: Dados inválidos
+ *       500:
+ *         description: Erro ao enviar mensagem
  */
 app.post('/send-message', async (req, res) => {
     const { chatId, message } = req.body;
@@ -74,16 +91,17 @@ app.post('/send-message', async (req, res) => {
         });
     }
     try {
-        await bot.sendMessage(chatId, message);
+        await bot.sendMessage(normalizeChatId(chatId), message);
         return res.status(200).json({
             sucess: true,
             message: 'Message sent successfully'
         });
     }
     catch (error) {
+        console.error(error);
         return res.status(500).json({
             sucess: false,
-            error: 'Failed to send message'
+            error: 'Failed to send message',
         });
     }
 });
